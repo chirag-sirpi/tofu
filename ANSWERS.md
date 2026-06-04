@@ -22,4 +22,6 @@ In this step, I'm provisioning a virtual private cloud (VPC) network, a secure G
 **Answer:**
 In this step, I'm setting up all required platform tools—including Jenkins for CI/CD, ArgoCD for GitOps CD, Istio Service Mesh for networking, Kyverno for policy enforcement, Falco for runtime threat detection, and the Prometheus/Grafana stack for monitoring—using an automated Ansible playbook with Helm, so that I can bootstrap the entire GKE cluster with a single, reproducible command rather than executing multiple manual Helm installs.
 
-
+### Question: Which Helm chart version did you use for ArgoCD, and what version of ArgoCD does it bundle?
+**Answer:**
+I used the ArgoCD Helm chart version `9.5.17`, which bundles ArgoCD version `v3.4.3`.
