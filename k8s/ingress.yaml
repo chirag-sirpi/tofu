@@ -5,6 +5,7 @@ metadata:
   namespace: flask-app
   annotations:
     nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/service-upstream: "true"
 spec:
   ingressClassName: nginx
   rules:
