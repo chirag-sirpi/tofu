@@ -6,7 +6,7 @@ metadata:
 spec:
   exportTo:
     - "*"
-  host: devsecops-flask
+  host: devsecops-flask.flask-app.svc.cluster.local
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL
