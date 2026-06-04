@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = "gcr.io/devsecops-gcp-project"
+        IMAGE_NAME = "devsecops-flask"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        SONAR_SCANNER_HOME = tool 'SonarQubeScanner'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('SonarQube SAST') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=devsecops-flask \
+                        -Dsonar.sources=app \
+                        -Dsonar.python.version=3"
+                }
+                timeout(time: 5, unit: 'MINUTES') {
+                    // Force pipeline to fail if SonarQube Quality Gate fails
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                script {
+                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ./app"
+                }
+            }
+        }
+
+        stage('Trivy Container Scan') {
+            steps {
+                // Scan the container image for OS/library vulnerabilities and fail on high/critical
+                sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --no-progress ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                script {
+                    // Push only if security checks pass
+                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('ArgoCD GitOps Trigger') {
+            steps {
+                // Update git repository containing Kubernetes manifests with the new image tag
+                // This triggers ArgoCD auto-sync
+                dir('k8s-manifests-repo') {
+                    checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'git@github.com:my-org/k8s-manifests-repo.git']]])
+                    sh "sed -i 's|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|g' deployment.yaml"
+                    sh "git config user.name 'Jenkins CI'"
+                    sh "git config user.email 'jenkins@jenkins.local'"
+                    sh "git commit -am 'Bump app image tag to ${IMAGE_TAG}'"
+                    sh "git push origin main"
+                }
+            }
+        }
+
+        stage('OWASP ZAP DAST') {
+            steps {
+                script {
+                    // Run DAST scan against staging/testing endpoint deployed via GitOps/ArgoCD
+                    // We run OWASP ZAP container to scan the app
+                    sh """
+                    docker run --rm -v \$(pwd):/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \
+                        -t http://devsecops-flask.staging.svc.cluster.local/metrics \
+                        -f openapi \
+                        -r zap_report.html || true
+                    """
+                }
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'zap_report.html', reportName: 'OWASP ZAP DAST Report', reportTitles: ''])
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        failure {
+            echo "Security Pipeline failed. Deployment blocked!"
+        }
+        success {
+            echo "Security Pipeline completed successfully. Deployment succeeded!"
+        }
+    }
+}

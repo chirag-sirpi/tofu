@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devsecops-flask
+  namespace: production
+  labels:
+    app: devsecops-flask
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devsecops-flask
+  template:
+    metadata:
+      labels:
+        app: devsecops-flask
+    spec:
+      # Secure Pod-level security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: flask-app
+          image: gcr.io/devsecops-gcp-project/devsecops-flask:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          # Secure Container-level security context
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # Flask requires temp file writing for some operations, but can be set true if configured
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devsecops-flask
+  namespace: production
+  labels:
+    app: devsecops-flask
+spec:
+  ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+  selector:
+    app: devsecops-flask
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: devsecops-flask-monitor
+  namespace: production
+  labels:
+    app: devsecops-flask
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: devsecops-flask
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

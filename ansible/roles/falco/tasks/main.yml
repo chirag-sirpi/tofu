@@ -1,0 +1,33 @@
+---
+- name: Create falco namespace
+  kubernetes.core.k8s:
+    name: falco
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: Add Falco Helm repo
+  kubernetes.core.helm_repository:
+    name: falcosecurity
+    repo_url: "https://falcosecurity.github.io/charts"
+
+- name: Install Falco with Falcosidekick
+  kubernetes.core.helm:
+    name: falco
+    chart_ref: falcosecurity/falco
+    release_namespace: falco
+    create_namespace: false
+    values:
+      # Enable ebpf driver for GKE compatibility (Cos node image compatibility)
+      driver:
+        kind: ebpf
+      falco:
+        json_output: true
+      falcosidekick:
+        enabled: true
+        webui:
+          enabled: true
+        # Enable prometheus exporter for dashboard correlation
+        prometheus:
+          enabled: true
+    state: present

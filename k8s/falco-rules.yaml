@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-custom-rules
+  namespace: falco
+  labels:
+    role: falco-rules
+data:
+  custom-rules.yaml: |
+    - rule: Terminal shell in container
+      desc: A shell was spawned inside a container. This is highly suspicious in production.
+      condition: container.id != host and proc.name in (bash, sh, zsh, psh, tcsh) and spawned_process
+      output: "Terminal shell spawned in container (user=%user.name user_uuid=%user.uid container_id=%container.id container_name=%container.name process=%proc.name parent=%proc.pname cmdline=%proc.cmdline)"
+      priority: WARNING
+      tags: [container, shell, mitre_execution]
+
+    - rule: Write below app folder
+      desc: An attempt to write files inside the application path /app.
+      condition: open_write and container.id != host and fd.name startswith /app/ and not proc.name in (gunicorn, python, python3)
+      output: "File modification attempt inside /app (file=%fd.name user=%user.name parent=%proc.pname cmdline=%proc.cmdline)"
+      priority: CRITICAL
+      tags: [container, file, mitre_defense_evasion]

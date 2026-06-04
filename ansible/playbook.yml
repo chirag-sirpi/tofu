@@ -1,0 +1,28 @@
+---
+- name: Bootstrap GKE DevSecOps Tooling
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run Jenkins installation
+      ansible.builtin.include_role:
+        name: jenkins
+
+    - name: Run ArgoCD installation
+      ansible.builtin.include_role:
+        name: argocd
+
+    - name: Run Istio installation
+      ansible.builtin.include_role:
+        name: istio
+
+    - name: Run Kyverno installation
+      ansible.builtin.include_role:
+        name: kyverno
+
+    - name: Run Falco installation
+      ansible.builtin.include_role:
+        name: falco
+
+    - name: Run Monitoring installation
+      ansible.builtin.include_role:
+        name: monitoring
