@@ -8,3 +8,4 @@ __pycache__/
 *.log
 
 bin/*
+opentofu/.terraform.tfstate.lock.info
