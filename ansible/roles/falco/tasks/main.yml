@@ -18,9 +18,9 @@
     release_namespace: falco
     create_namespace: false
     values:
-      # Enable ebpf driver for GKE compatibility (Cos node image compatibility)
+      # Enable modern ebpf driver for GKE compatibility (Cos node image compatibility)
       driver:
-        kind: ebpf
+        kind: modern_ebpf
       falco:
         json_output: true
       falcosidekick:
