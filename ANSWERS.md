@@ -79,3 +79,7 @@ I observed that ArgoCD detected the drift and immediately triggered a self-heal 
 ### Question: What are we doing in this step?
 **Answer:**
 In this step, I'm configuring an Istio Service Mesh by enabling sidecar injection on the application namespace, enforcing strict mutual TLS (mTLS) for encrypted service-to-service communication, and defining traffic rules with retry policies and circuit breakers, so that my application can benefit from secure, resilient, and observable network communication.
+
+### Question: What does strict mTLS mode do for your Flask application?
+**Answer:**
+Strict mTLS mode ensures that all communication to and from the Flask application is encrypted in transit and requires both the client and server to authenticate each other using mutually validated cryptographically secure certificates, thereby blocking any unencrypted plain-text traffic or unauthorized service access in the cluster.
