@@ -25,3 +25,11 @@ In this step, I'm setting up all required platform tools—including Jenkins for
 ### Question: Which Helm chart version did you use for ArgoCD, and what version of ArgoCD does it bundle?
 **Answer:**
 I used the ArgoCD Helm chart version `9.5.17`, which bundles ArgoCD version `v3.4.3`.
+
+---
+
+## Step 3: Build the Flask Microservice
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm building a Python Flask microservice instrumented with Prometheus metrics, containerizing it using a multi-stage Dockerfile with a secure, non-root alpine base, and pushing the image to GCP Artifact Registry, so that I can run a secure, light-weight, and observable web service monitored by the platform.
