@@ -67,3 +67,7 @@ In this step, I'm configuring three automated security scanning layers—SonarQu
 ### Question: What are we doing in this step?
 **Answer:**
 In this step, I'm defining the application's desired state using declarative Kubernetes manifests (Deployment, Service, HorizontalPodAutoscaler, and PodDisruptionBudget) in a Git repository, and configuring an ArgoCD Application with automated sync and self-healing, so that I can implement a continuous delivery (CD) pipeline where the cluster automatically self-corrects from configuration drift and ensures high availability.
+
+### Question: What happened when you manually scaled the deployment to 4 replicas?
+**Answer:**
+I observed that ArgoCD detected the drift and immediately triggered a self-heal operation. The replica count returned to 2 in the cluster to match the desired state defined in the Git repository without any human intervention.
