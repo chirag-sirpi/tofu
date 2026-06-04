@@ -47,3 +47,7 @@ In this step, I'm building a Python Flask microservice instrumented with Prometh
 ### Question: What are we doing in this step?
 **Answer:**
 In this step, I'm setting up an automated Jenkins CI/CD pipeline integrated with static application security testing (SAST) and container vulnerability scanning, so that I can automatically build, scan, and safely deploy the Flask microservice to GKE only when all security gates successfully pass.
+
+### Question: What happens if the Trivy container scan finds a CRITICAL vulnerability in your image?
+**Answer:**
+If Trivy finds a CRITICAL vulnerability, it exits with a non-zero exit code (`--exit-code 1`), causing the Trivy Container Scan stage to fail. This halts the pipeline execution immediately, preventing the subsequent Push Image and ArgoCD GitOps Trigger stages from running, thereby blocking the vulnerable image from being deployed to the production environment.
