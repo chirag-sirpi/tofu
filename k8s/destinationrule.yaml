@@ -4,6 +4,8 @@ metadata:
   name: flask-app
   namespace: flask-app
 spec:
+  exportTo:
+    - "*"
   host: devsecops-flask
   trafficPolicy:
     tls:
