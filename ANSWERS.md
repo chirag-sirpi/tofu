@@ -59,3 +59,11 @@ If Trivy finds a CRITICAL vulnerability, it exits with a non-zero exit code (`--
 ### Question: What are we doing in this step?
 **Answer:**
 In this step, I'm configuring three automated security scanning layers—SonarQube for SAST, Trivy for container scanning, and OWASP ZAP for DAST dynamic scanning—so that the pipeline automatically halts and blocks vulnerable deployments to production if any high or critical severity issues are detected.
+
+---
+
+## Step 6: Deploy with ArgoCD GitOps
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm defining the application's desired state using declarative Kubernetes manifests (Deployment, Service, HorizontalPodAutoscaler, and PodDisruptionBudget) in a Git repository, and configuring an ArgoCD Application with automated sync and self-healing, so that I can implement a continuous delivery (CD) pipeline where the cluster automatically self-corrects from configuration drift and ensures high availability.
