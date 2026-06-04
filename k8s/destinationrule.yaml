@@ -2,10 +2,8 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: flask-app
-  namespace: flask-app
+  namespace: istio-system
 spec:
-  exportTo:
-    - "*"
   host: devsecops-flask.flask-app.svc.cluster.local
   trafficPolicy:
     tls:
