@@ -71,3 +71,11 @@ In this step, I'm defining the application's desired state using declarative Kub
 ### Question: What happened when you manually scaled the deployment to 4 replicas?
 **Answer:**
 I observed that ArgoCD detected the drift and immediately triggered a self-heal operation. The replica count returned to 2 in the cluster to match the desired state defined in the Git repository without any human intervention.
+
+---
+
+## Step 7: Configure Istio Service Mesh
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm configuring an Istio Service Mesh by enabling sidecar injection on the application namespace, enforcing strict mutual TLS (mTLS) for encrypted service-to-service communication, and defining traffic rules with retry policies and circuit breakers, so that my application can benefit from secure, resilient, and observable network communication.
