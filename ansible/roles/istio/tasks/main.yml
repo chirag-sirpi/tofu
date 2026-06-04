@@ -24,3 +24,11 @@
     chart_ref: istio/istiod
     release_namespace: istio-system
     state: present
+
+- name: Install Istio Ingress Gateway
+  kubernetes.core.helm:
+    name: istio-gateway
+    chart_ref: istio/gateway
+    release_namespace: istio-system
+    state: present
+
