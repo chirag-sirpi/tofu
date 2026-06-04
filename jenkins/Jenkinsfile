@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = "gcr.io/devsecops-gcp-project"
-        IMAGE_NAME = "devsecops-flask"
+        REGISTRY = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
+        IMAGE_NAME = "flask-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
         SONAR_SCANNER_HOME = tool 'SonarQubeScanner'
     }
@@ -58,9 +58,9 @@ pipeline {
             steps {
                 // Update git repository containing Kubernetes manifests with the new image tag
                 // This triggers ArgoCD auto-sync
-                dir('k8s-manifests-repo') {
-                    checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'git@github.com:my-org/k8s-manifests-repo.git']]])
-                    sh "sed -i 's|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|g' deployment.yaml"
+                dir('tofu-repo') {
+                    checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/chirag-sirpi/tofu.git']]])
+                    sh "sed -i 's|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deployment.yaml"
                     sh "git config user.name 'Jenkins CI'"
                     sh "git config user.email 'jenkins@jenkins.local'"
                     sh "git commit -am 'Bump app image tag to ${IMAGE_TAG}'"
@@ -72,11 +72,11 @@ pipeline {
         stage('OWASP ZAP DAST') {
             steps {
                 script {
-                    // Run DAST scan against staging/testing endpoint deployed via GitOps/ArgoCD
+                    // Run DAST scan against production endpoint deployed via GitOps/ArgoCD
                     // We run OWASP ZAP container to scan the app
                     sh """
                     docker run --rm -v \$(pwd):/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \
-                        -t http://devsecops-flask.staging.svc.cluster.local/metrics \
+                        -t http://devsecops-flask.production.svc.cluster.local/metrics \
                         -f openapi \
                         -r zap_report.html || true
                     """
