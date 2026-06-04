@@ -5,7 +5,7 @@ metadata:
   namespace: flask-app
 spec:
   selector:
-    istio: ingressgateway # use default ingressgateway
+    istio: gateway # use default gateway
   servers:
     - port:
         number: 80
