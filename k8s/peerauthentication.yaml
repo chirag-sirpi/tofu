@@ -5,4 +5,4 @@ metadata:
   namespace: flask-app
 spec:
   mtls:
-    mode: STRICT
+    mode: PERMISSIVE
