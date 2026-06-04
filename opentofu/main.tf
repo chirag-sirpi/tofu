@@ -42,6 +42,9 @@ resource "google_container_cluster" "primary" {
   name     = var.cluster_name
   location = var.region
 
+  # Allow OpenTofu to destroy and recreate cluster if needed
+  deletion_protection = false
+
   # We can't define a cluster with no node pool, so we create a small default one and delete it immediately.
   remove_default_node_pool = true
   initial_node_count       = 1
