@@ -33,6 +33,7 @@ spec:
               value: /home/appuser
           # Secure Container-level security context
           securityContext:
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false  # Flask requires temp file writing for some operations, but can be set true if configured
             capabilities:
