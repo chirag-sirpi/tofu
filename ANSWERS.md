@@ -39,3 +39,11 @@ In this step, I'm building a Python Flask microservice instrumented with Prometh
 1. **Multi-Stage Build:** Dependencies are compiled in a temporary builder stage, and only the final runtime artifacts are copied to the minimal execution stage. This excludes build tools (like `gcc`, `musl-dev`) from the final image, significantly reducing the attack surface.
 2. **Non-Root Execution:** A custom non-privileged user and group (`appuser:appgroup`) are created to run the application process instead of default `root`. This prevents container breakouts from acquiring root privileges on the GKE host nodes.
 3. **Minimal Base Image:** Using a Python Alpine base (`python:3.12-alpine`) keeps the image footprint small and reduces the presence of unnecessary system packages and potential CVEs.
+
+---
+
+## Step 4: Set Up Jenkins CI/CD Pipeline
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm setting up an automated Jenkins CI/CD pipeline integrated with static application security testing (SAST) and container vulnerability scanning, so that I can automatically build, scan, and safely deploy the Flask microservice to GKE only when all security gates successfully pass.
