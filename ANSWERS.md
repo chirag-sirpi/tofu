@@ -51,3 +51,11 @@ In this step, I'm setting up an automated Jenkins CI/CD pipeline integrated with
 ### Question: What happens if the Trivy container scan finds a CRITICAL vulnerability in your image?
 **Answer:**
 If Trivy finds a CRITICAL vulnerability, it exits with a non-zero exit code (`--exit-code 1`), causing the Trivy Container Scan stage to fail. This halts the pipeline execution immediately, preventing the subsequent Push Image and ArgoCD GitOps Trigger stages from running, thereby blocking the vulnerable image from being deployed to the production environment.
+
+---
+
+## Step 5: Integrate Security Scanning
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm configuring three automated security scanning layers—SonarQube for SAST, Trivy for container scanning, and OWASP ZAP for DAST dynamic scanning—so that the pipeline automatically halts and blocks vulnerable deployments to production if any high or critical severity issues are detected.
