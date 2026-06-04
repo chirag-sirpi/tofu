@@ -83,3 +83,39 @@ In this step, I'm configuring an Istio Service Mesh by enabling sidecar injectio
 ### Question: What does strict mTLS mode do for your Flask application?
 **Answer:**
 Strict mTLS mode ensures that all communication to and from the Flask application is encrypted in transit and requires both the client and server to authenticate each other using mutually validated cryptographically secure certificates, thereby blocking any unencrypted plain-text traffic or unauthorized service access in the cluster.
+
+---
+
+## Step 8: Configure NGINX Ingress with Rate Limiting
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm deploying an NGINX Ingress Controller via Helm and configuring an Ingress resource with rate-limiting annotations (`limit-rps: 10`) to expose the Flask microservice through a public LoadBalancer IP, so that I can provide a single external entry point with built-in abuse protection that throttles excessive requests at the edge before they reach the application pods.
+
+### Question: What happens when the rate limit is exceeded?
+**Answer:**
+When the rate limit of 10 requests per second is exceeded, the NGINX Ingress Controller returns an HTTP 503 Service Unavailable response to the client, effectively throttling excessive traffic at the edge and protecting the backend Flask application pods from being overwhelmed by a flood of requests.
+
+---
+
+## Step 9: Enforce Kyverno Security Policies
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm deploying four Kyverno ClusterPolicies in `Enforce` mode—requiring non-root user execution, disallowing privileged containers, mandating CPU and memory resource limits, and restricting image pulls to approved registries—so that the Kubernetes admission controller automatically blocks any workload that violates these security baselines before it is ever scheduled.
+
+### Question: What happened when you tried to create a privileged pod?
+**Answer:**
+The Kyverno admission webhook immediately denied the request. It returned four distinct policy violation errors: (1) `disallow-privileged-containers` blocked the privileged security context, (2) `require-non-root-user` blocked the missing `runAsNonRoot: true`, (3) `require-resource-limits` blocked the missing CPU/memory limits, and (4) `restrict-image-registries` blocked the `nginx` image because `docker.io` was not in the allowed registry list for the `flask-app` namespace. The pod was never created.
+
+---
+
+## Step 10: Implement Runtime Security with Falco
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm deploying Falco as a DaemonSet for real-time kernel-level system call monitoring, defining custom detection rules for suspicious container activity (shell spawning, unauthorized file writes), and forwarding alerts to Falcosidekick UI for centralized visualization, so that I can detect and respond to runtime threats like container breakouts, reverse shells, and unauthorized file modifications in real-time.
+
+### Question: What types of runtime events does Falco detect in your cluster?
+**Answer:**
+Falco detects multiple categories of runtime security events in the cluster: (1) **Unexpected K8S API Server connections** from containers (rule: `Contact K8S API Server From Container`), flagging when application containers make direct API server calls which could indicate credential theft or lateral movement, (2) **STDOUT/STDIN redirection to network connections** (rule: `Redirect STDOUT/STDIN to Network Connection in Container`), detecting potential reverse shell activity, and (3) custom rules defined in the `falco-custom-rules` ConfigMap for detecting **terminal shell spawning** inside containers and **unauthorized file writes** under `/app/`, both of which are strong indicators of container compromise in a production environment.
