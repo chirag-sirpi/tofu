@@ -68,6 +68,12 @@ resource "google_container_cluster" "primary" {
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
+
+  # Force the temporary default node pool to also use smaller standard HDD disk
+  node_config {
+    disk_size_gb = 30
+    disk_type    = "pd-standard"
+  }
 }
 
 # Separated Node Pool using SPOT VMs for low-cost ($1.50-$2.00/day) dev environment
@@ -81,6 +87,10 @@ resource "google_container_node_pool" "spot_nodes" {
     # SPOT instances are much cheaper and ideal for this project.
     spot         = true
     machine_type = var.machine_type
+
+    # Use standard HDD disks to stay within quotas
+    disk_size_gb = 30
+    disk_type    = "pd-standard"
 
     # Configure custom service account with least-privilege permissions
     service_account = google_service_account.gke_nodes.email
