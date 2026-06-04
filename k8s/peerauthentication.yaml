@@ -2,7 +2,7 @@ apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
-  namespace: production
+  namespace: flask-app
 spec:
   mtls:
     mode: STRICT

@@ -2,7 +2,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: devsecops-flask
-  namespace: production
+  namespace: flask-app
 spec:
   minAvailable: 1
   selector:

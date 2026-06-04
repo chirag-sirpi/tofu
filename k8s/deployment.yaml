@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: devsecops-flask
-  namespace: production
+  namespace: flask-app
   labels:
     app: devsecops-flask
 spec:
@@ -63,7 +63,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: devsecops-flask-monitor
-  namespace: production
+  namespace: flask-app
   labels:
     app: devsecops-flask
     release: kube-prometheus-stack

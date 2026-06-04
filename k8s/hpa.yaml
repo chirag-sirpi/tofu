@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: devsecops-flask
-  namespace: production
+  namespace: flask-app
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

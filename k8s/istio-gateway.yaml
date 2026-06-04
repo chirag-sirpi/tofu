@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: devsecops-gateway
-  namespace: production
+  namespace: flask-app
 spec:
   selector:
     istio: ingressgateway # use default ingressgateway
@@ -17,8 +17,8 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: devsecops-flask-route
-  namespace: production
+  name: flask-app
+  namespace: flask-app
 spec:
   hosts:
     - "*"
