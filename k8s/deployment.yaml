@@ -28,6 +28,9 @@ spec:
           ports:
             - containerPort: 5000
               name: http
+          env:
+            - name: HOME
+              value: /home/appuser
           # Secure Container-level security context
           securityContext:
             allowPrivilegeEscalation: false

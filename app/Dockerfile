@@ -14,14 +14,14 @@ FROM python:3.12-alpine
 WORKDIR /app
 
 # Create a non-privileged user to run the application
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -g 1000 -S appgroup && adduser -u 1000 -S appuser -G appgroup
 
 # Copy python packages installed in builder stage
-COPY --from=builder /root/.local /home/appuser/.local
+COPY --from=builder --chown=appuser:appgroup /root/.local /home/appuser/.local
 COPY app.py .
 
 # Adjust permissions
-RUN chown -R appuser:appgroup /app
+RUN chown -R appuser:appgroup /app /home/appuser/.local
 
 # Configure PATH to include user local bin
 ENV PATH=/home/appuser/.local/bin:$PATH
