@@ -127,7 +127,7 @@ spec:
 
     post {
         always {
-            cleanWs()
+            deleteDir()
         }
         failure {
             echo "Security Pipeline failed. Deployment blocked!"
