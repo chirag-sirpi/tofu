@@ -24,7 +24,7 @@ spec:
       containers:
         - name: flask-app
           image: us-central1-docker.pkg.dev/terraform-460705/devsecops-repo/flask-app:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
               name: http
