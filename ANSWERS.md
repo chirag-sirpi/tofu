@@ -119,3 +119,31 @@ In this step, I'm deploying Falco as a DaemonSet for real-time kernel-level syst
 ### Question: What types of runtime events does Falco detect in your cluster?
 **Answer:**
 Falco detects multiple categories of runtime security events in the cluster: (1) **Unexpected K8S API Server connections** from containers (rule: `Contact K8S API Server From Container`), flagging when application containers make direct API server calls which could indicate credential theft or lateral movement, (2) **STDOUT/STDIN redirection to network connections** (rule: `Redirect STDOUT/STDIN to Network Connection in Container`), detecting potential reverse shell activity, and (3) custom rules defined in the `falco-custom-rules` ConfigMap for detecting **terminal shell spawning** inside containers and **unauthorized file writes** under `/app/`, both of which are strong indicators of container compromise in a production environment.
+
+### Question: What information does the Falco alert include that would help a security team investigate the incident?
+**Answer:**
+A Falco alert provides comprehensive forensic information extracted directly from kernel-level system calls and Kubernetes API context, which is critical for security investigations:
+1. **Event Meta-information**: Exact timestamp of the event, the severity/priority level (e.g., `WARNING`, `CRITICAL`), and the matched signature rule name (e.g., `Terminal shell in container`).
+2. **Process Execution Details**: The name of the process that triggered the event (`proc.name`, e.g., `sh`), the exact command line arguments used (`proc.cmdline`, e.g., `sh -c ls /app`), and the parent process name (`proc.pname`, e.g., `gunicorn` or `containerd-shim`), which traces the execution hierarchy.
+3. **Container Context**: The container ID (`container.id`), container name (`container.name`), and container image repository/tag, confirming exactly which container was targeted.
+4. **Kubernetes Cluster Context**: The Kubernetes namespace (`k8s.ns.name=flask-app`), pod name (`k8s.pod.name`), and associated labels, helping map the anomaly to a specific service topology.
+5. **User Context**: The system UID (`user.uid=1000`) and username (`user.name`), showing if the process executed with root privileges or restricted user context.
+
+---
+
+## Step 11: Monitor with Prometheus and Grafana
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm establishing comprehensive observability for the Flask application using Prometheus and Grafana. I connect Prometheus to scrape the Flask microservice metrics by applying a custom ServiceMonitor resource, import a custom Grafana dashboard displaying the RED metrics (Request rate, Error rate, Duration) and correlating them with Falco runtime security events, and deploy a custom PrometheusRule alerting resource (`FlaskHighErrorRate`) to automatically alert when error rates spike. This correlation lets operations and security teams monitor application health and detect if security incidents (like shell spawning or brute-force attacks) are causing performance degradation or service outages in real-time.
+
+### Question: What PromQL expression did you use for the error rate panel, and what does the `for: 5m` clause do in your PrometheusRule?
+**Answer:**
+1. **PromQL Expression for Error Rate Panel:**
+   ```promql
+   sum(rate(http_requests_total{status=~"5.."}[5m])) by (status, endpoint)
+   ```
+   *Explanation:* This expression calculates the per-second rate of HTTP requests returning a server error status code (matching regex `5..` such as 500, 503) over a rolling 5-minute window (`[5m]`) using the `rate()` function, and then groups and aggregates the rates using `sum() by (status, endpoint)` to display the total error rate per endpoint and status code.
+
+2. **The `for: 5m` Clause in the PrometheusRule:**
+   The `for: 5m` clause specifies the time duration that the alert condition (e.g., error rate > 5%) must continuously remain active (true) before transitioning from `pending` to the `firing` state in Alertmanager. This prevents transient network spikes, temporary pod restarts, or short-lived traffic spikes from triggering loud, false-positive alerts, ensuring notifications are only sent for persistent, sustained incidents.
