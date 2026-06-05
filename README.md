@@ -68,6 +68,14 @@ In this step, I'm setting up an automated Jenkins CI/CD pipeline integrated with
 
 If Trivy finds a CRITICAL vulnerability, it exits with a non-zero exit code (`--exit-code 1`), causing the Trivy Container Scan stage to fail. This halts the pipeline execution immediately, preventing the subsequent Push Image and ArgoCD GitOps Trigger stages from running, thereby blocking the vulnerable image from being deployed to the production environment.
 
+### Instant Auto-Trigger and GitOps Webhook Architecture
+
+To establish a production-grade continuous integration trigger that avoids slow interval polling, I implemented a push-triggered webhook architecture:
+1. **Cross-Namespace Ingress Webhook Routing:** Configured an NGINX Ingress path rule on the public cluster endpoint (`/github-webhook/`) that routes traffic to an `ExternalName` service pointing to the private Jenkins service in the `jenkins` namespace.
+2. **GitHub Webhook Registration:** Created a push-event webhook on the GitHub repository targeting the public ingress URL, triggering immediate builds on user pushes.
+3. **Pipeline Skip-CI Loop Prevention:** Implemented a global flow-control variable (`skipCi`) that parses the latest commit message during the Checkout stage. If the commit contains `[skip ci]` (specifically the automated GitOps version bumps), all build, scan, and deployment stages are dynamically skipped in seconds, preventing infinite recursive execution loops.
+4. **Build Concurrency Protection:** Configured `disableConcurrentBuilds()` in the pipeline settings to queue concurrent execution requests and prevent SCM push conflicts during automated manifest updates.
+
 ## Integrating SAST, Container Scanning, and DAST
 
 ### Multi-layer security scanning strategy
