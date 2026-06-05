@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: devsecops-flask-monitor
+  namespace: flask-app
+  labels:
+    app: devsecops-flask
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: devsecops-flask
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -72,8 +72,7 @@ spec:
       scaleDownDelaySeconds: 120
       # Max pods allowed during blue-green switch (both colors alive simultaneously)
       previewReplicaCount: 5
-      # Anti-affinity for preview pods — spread across different nodes than active
+      # Anti-affinity for preview pods: Argo Rollouts allows exactly one antiAffinity strategy.
       antiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution: {}
         preferredDuringSchedulingIgnoredDuringExecution:
           weight: 1
