@@ -28,4 +28,6 @@
           - workflow-aggregator:latest
           - sonar:latest
           - blueocean:latest
+          - kubernetes:latest
+          - kubernetes-credentials-provider:latest
     state: present

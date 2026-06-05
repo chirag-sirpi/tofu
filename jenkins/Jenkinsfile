@@ -77,7 +77,7 @@ spec:
             steps {
                 container('kaniko') {
                     withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh "/kaniko/executor --context=. --dockerfile=app/Dockerfile --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG} --destination=\${REGISTRY}/\${IMAGE_NAME}:latest"
+                        sh "/kaniko/executor --context=app --dockerfile=app/Dockerfile --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG} --destination=\${REGISTRY}/\${IMAGE_NAME}:latest"
                     }
                 }
             }
