@@ -90,7 +90,7 @@ In this step, I'm configuring three automated security scanning layers—SonarQu
 
 ### GitOps workflow design
 
-In this step, I'm defining the application's desired state using declarative Kubernetes manifests (Deployment, Service, HorizontalPodAutoscaler, and PodDisruptionBudget) in a Git repository, and configuring an ArgoCD Application with automated sync and self-healing, so that I can implement a continuous delivery (CD) pipeline where the cluster automatically self-corrects from configuration drift and ensures high availability.
+In this step, I'm defining the application's desired state using declarative Kubernetes manifests (Deployment, Service, HorizontalPodAutoscaler, and PodDisruptionBudget) in a Git repository, and configuring an ArgoCD Application with automated sync and self-healing, so that I can implement a continuous delivery (CD) pipeline where the cluster automatically self-corrects from configuration drift and ensures high availability. The deployment runs a baseline of **5 replicas** (`minReplicas: 5`, `maxReplicas: 10`) for inherent HA even at idle load.
 
 ![Image](https://learn.nextwork.org/encouraged_cyan_heroic_salamander/uploads/467554e5-3aec-45c4-8b5b-8ba8e1042ae0_8qqrzodt)
 
@@ -98,7 +98,7 @@ In this step, I'm defining the application's desired state using declarative Kub
 
 ### Drift detection in action
 
-I observed that ArgoCD detected the drift and immediately triggered a self-heal operation. The replica count returned to 2 in the cluster to match the desired state defined in the Git repository without any human intervention.
+I observed that ArgoCD detected the drift and immediately triggered a self-heal operation. The replica count returned to **5** in the cluster to match the desired state defined in the Git repository without any human intervention.
 
 
 ## Securing Service Communication with Istio mTLS
@@ -186,7 +186,7 @@ sum(rate(http_requests_total{status=~"5.."}[5m])) by (status, endpoint)
 
 ### Resilience configuration goals
 
-In this step, I'm verifying the self-healing and auto-scaling capabilities of the microservice deployment in GKE to ensure operational resilience. I check that ArgoCD automatically self-heals the deployment by reverting manual changes back to the Git-defined configuration, confirm that the liveness and readiness probes restart unhealthy containers, and run a CPU load test to observe the Horizontal Pod Autoscaler (HPA) scale the replica count up dynamically from 2 to 4 in real-time as CPU utilization crosses the 80% threshold.
+In this step, I'm verifying the self-healing and auto-scaling capabilities of the microservice deployment in GKE to ensure operational resilience. I check that ArgoCD automatically self-heals the deployment by reverting manual changes back to the Git-defined configuration, confirm that the liveness and readiness probes restart unhealthy containers, and run a CPU load test to observe the Horizontal Pod Autoscaler (HPA) scale the replica count up dynamically from the baseline of **5** up to a maximum of **10** pods in real-time as CPU/memory utilization crosses the 80% threshold.
 
 ![Image](https://learn.nextwork.org/encouraged_cyan_heroic_salamander/uploads/467554e5-3aec-45c4-8b5b-8ba8e1042ae0_kcaqkiaq)
 
@@ -222,7 +222,7 @@ Key concepts learned:
 
 ### Time and challenges
 
-This project took approximately 12 hours to complete.
+This project took approximately 15+ hours to complete.
 The most challenging part was resolving network connectivity issues between the GMP Prometheus scraper (running outside the service mesh) and the Flask application sidecar (enforcing strict mTLS in the mesh). Configuring a pod-level permissive mTLS selector for port 5000 in PeerAuthentication was critical to solve this. Another major challenge was scoping the Kyverno require-non-root-user policy to prevent it from blocking third-party system components (like Grafana, Prometheus Operator, or Falco) in other namespaces while strictly enforcing security boundaries on the Flask app.
 
 
