@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flask-high-error-rate
+  namespace: default
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: flask-app
+      rules:
+        - alert: FlaskHighErrorRate
+          expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Flask high error rate on {{ $labels.instance }}"
+            description: "Flask application is experiencing a high HTTP 5xx error rate (> 5%) for the last 5 minutes."
