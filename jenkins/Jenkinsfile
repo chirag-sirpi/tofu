@@ -1,5 +1,47 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    some-label: jenkins-agent
+spec:
+  containers:
+  - name: sonar
+    image: sonarsource/sonar-scanner-cli:latest
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: trivy
+    image: aquasec/trivy:latest
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: git-tools
+    image: alpine/git:latest
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: zap
+    image: ghcr.io/zaproxy/zaproxy:stable
+    command:
+    - sleep
+    args:
+    - 99d
+'''
+        }
+    }
 
     environment {
         REGISTRY = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
@@ -17,90 +59,65 @@ pipeline {
 
         stage('SonarQube SAST') {
             steps {
-                script {
-                    sh """
-                    echo "INFO: Scanner configuration file: /opt/sonar-scanner/conf/sonar-scanner.properties"
-                    echo "INFO: Project key: devsecops-flask"
-                    echo "INFO: Base dir: /var/jenkins_home/workspace/devsecops-pipeline"
-                    echo "INFO: Load project settings for 'devsecops-flask'"
-                    echo "INFO: Load project repositories"
-                    echo "INFO: Load quality profiles"
-                    echo "INFO: Load active rules"
-                    echo "INFO: Load project Settings"
-                    echo "INFO: Sensor Python Sensor [python]"
-                    echo "INFO: Sensor Python Sensor [python] (done) | time=102ms"
-                    echo "INFO: Analysis report generated in /var/jenkins_home/workspace/devsecops-pipeline/.scannerwork/scanner-report"
-                    echo "INFO: Analysis success"
-                    echo "INFO: Quality Gate status: OK"
-                    """
+                container('sonar') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=devsecops-flask \
+                          -Dsonar.sources=app/ \
+                          -Dsonar.host.url=http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \
+                          -Dsonar.token=\${SONAR_TOKEN}
+                        """
+                    }
                 }
             }
         }
 
-        stage('Build Image') {
+        stage('Build & Push Image') {
             steps {
-                script {
-                    sh """
-                    echo "Sending build context to Docker daemon  35.84kB"
-                    echo "Step 1/9 : FROM python:3.12-alpine AS builder"
-                    echo " ---> 815059b670f5"
-                    echo "Step 2/9 : WORKDIR /app"
-                    echo " ---> Using cache"
-                    echo " ---> de7c7838d30c"
-                    echo "Successfully built 815059b670f5"
-                    echo "Successfully tagged \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}"
-                    """
+                container('kaniko') {
+                    withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        sh "/kaniko/executor --context=. --dockerfile=app/Dockerfile --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG} --destination=\${REGISTRY}/\${IMAGE_NAME}:latest"
+                    }
                 }
             }
         }
 
         stage('Trivy Container Scan') {
             steps {
-                script {
-                    sh """
-                    echo "Scanning \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}..."
-                    echo "Number of vulnerabilities: 0 (HIGH: 0, CRITICAL: 0)"
-                    echo "Trivy Scan Passed!"
-                    """
-                }
-            }
-        }
-
-        stage('Push Image') {
-            steps {
-                script {
-                    sh """
-                    echo "The push refers to repository [\${REGISTRY}/\${IMAGE_NAME}]"
-                    echo "de7c7838d30c: Pushed"
-                    echo "\${IMAGE_TAG}: digest: sha256:8e6beb59fc01e5b1bfc3e940c695ef46a5b5b381687370c0c0779e4ad3311913 size: 856"
-                    """
+                container('trivy') {
+                    withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --no-progress \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}"
+                    }
                 }
             }
         }
 
         stage('ArgoCD GitOps Trigger') {
             steps {
-                script {
-                    sh """
-                    echo "Updating image tag to \${IMAGE_TAG} in k8s/deployment.yaml..."
-                    echo "[main 87adc86] Bump app image tag to \${IMAGE_TAG}"
-                    echo " 1 file changed, 1 insertion(+), 1 deletion(-)"
-                    echo "Pushing changes to GitOps repository..."
-                    echo "Successfully pushed to origin main"
-                    """
+                container('git-tools') {
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
+                        sh """
+                        git config user.name 'Jenkins CI'
+                        git config user.email 'jenkins@jenkins.local'
+                        sed -i 's|image: \${REGISTRY}/\${IMAGE_NAME}:.*|image: \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}|g' k8s/deployment.yaml
+                        git add k8s/deployment.yaml
+                        git commit -m "chore: bump image tag to \${IMAGE_TAG} [skip ci]"
+                        git push https://\${GH_TOKEN}@github.com/chirag-sirpi/tofu.git main
+                        """
+                    }
                 }
             }
         }
 
         stage('OWASP ZAP DAST') {
             steps {
-                script {
+                container('zap') {
                     sh """
-                    echo "Starting OWASP ZAP DAST scan..."
-                    echo "Scanning http://devsecops-flask.production.svc.cluster.local/metrics"
-                    echo "OWASP ZAP scan completed successfully."
-                    echo "No high alerts found. HTML report generated: zap_report.html"
-                    echo "<html><head><title>OWASP ZAP Report</title></head><body><h1>OWASP ZAP DAST Report</h1><p>Status: Clean (0 High, 0 Medium, 0 Low)</p></body></html>" > zap_report.html
+                    zap-api-scan.py \
+                      -t http://devsecops-flask.flask-app.svc.cluster.local/metrics \
+                      -f openapi \
+                      -r zap_report.html || true
                     """
                 }
                 publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'zap_report.html', reportName: 'OWASP ZAP DAST Report', reportTitles: ''])
@@ -110,7 +127,7 @@ pipeline {
 
     post {
         always {
-            deleteDir()
+            cleanWs()
         }
         failure {
             echo "Security Pipeline failed. Deployment blocked!"
