@@ -12,7 +12,7 @@
     name: "{{ vault_namespace }}"
     state: present
 
-- name: Deploy HashiCorp Vault (dev mode — auto-unseal for cluster use)
+- name: Deploy HashiCorp Vault (HA mode + GCP KMS auto-unseal)
   kubernetes.core.helm:
     name: "{{ vault_release_name }}"
     chart_ref: hashicorp/vault
@@ -20,13 +20,59 @@
     release_namespace: "{{ vault_namespace }}"
     create_namespace: true
     wait: true
-    wait_condition:
-      type: Ready
     values:
       server:
-        dev:
-          enabled: true          # Auto-unseals; replace with HA + auto-unseal in prod
-          devRootToken: "root"
+        # ── HA mode: 3 replicas, Raft integrated storage ─────────────────────
+        ha:
+          enabled: true
+          replicas: "{{ vault_replicas }}"
+          raft:
+            enabled: true
+            setNodeId: true
+            config: |
+              ui = true
+
+              listener "tcp" {
+                tls_disable = 1
+                address     = "[::]:8200"
+                cluster_address = "[::]:8201"
+              }
+
+              storage "raft" {
+                path = "/vault/data"
+                retry_join {
+                  leader_api_addr = "http://vault-0.vault-internal:8200"
+                }
+                retry_join {
+                  leader_api_addr = "http://vault-1.vault-internal:8200"
+                }
+                retry_join {
+                  leader_api_addr = "http://vault-2.vault-internal:8200"
+                }
+              }
+
+              # GCP KMS auto-unseal — no human intervention needed on restart
+              seal "gcpckms" {
+                project     = "{{ vault_gcp_project }}"
+                region      = "{{ vault_gcp_region }}"
+                key_ring    = "{{ vault_kms_keyring }}"
+                crypto_key  = "{{ vault_kms_key }}"
+              }
+
+              service_registration "kubernetes" {}
+
+        # Persistent storage for Raft WAL
+        dataStorage:
+          enabled: true
+          size: 10Gi
+          storageClass: standard-rwo
+
+        # Audit log persistence
+        auditStorage:
+          enabled: true
+          size: 5Gi
+          storageClass: standard-rwo
+
         readinessProbe:
           enabled: true
           path: /v1/sys/health?standbyok=true
@@ -37,8 +83,14 @@
           limits:
             memory: "512Mi"
             cpu: "500m"
+
+        # Workload Identity — Vault uses GKE SA mapped to GCP SA for KMS access
+        serviceAccount:
+          annotations:
+            iam.gke.io/gcp-service-account: "vault-kms-sa@{{ vault_gcp_project }}.iam.gserviceaccount.com"
+
       injector:
-        enabled: true            # Vault Agent Injector for sidecar secret injection
+        enabled: true
         resources:
           requests:
             memory: "64Mi"
@@ -46,6 +98,7 @@
           limits:
             memory: "128Mi"
             cpu: "250m"
+
 
 # ── Seed secrets used by Jenkins pipeline ─────────────────────────────────────
 - name: Wait for Vault pod to be ready

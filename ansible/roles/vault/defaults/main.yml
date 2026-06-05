@@ -2,4 +2,8 @@
 vault_namespace: vault
 vault_chart_version: "0.29.1"
 vault_release_name: vault
-vault_replicas: 1
+vault_replicas: 3                              # HA: 3 nodes, quorum=2
+vault_gcp_project: "terraform-460705"
+vault_gcp_region: "us-central1"
+vault_kms_keyring: "vault-unseal-keyring"
+vault_kms_key: "vault-unseal-key"
