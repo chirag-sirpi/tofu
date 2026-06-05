@@ -147,3 +147,15 @@ In this step, I'm establishing comprehensive observability for the Flask applica
 
 2. **The `for: 5m` Clause in the PrometheusRule:**
    The `for: 5m` clause specifies the time duration that the alert condition (e.g., error rate > 5%) must continuously remain active (true) before transitioning from `pending` to the `firing` state in Alertmanager. This prevents transient network spikes, temporary pod restarts, or short-lived traffic spikes from triggering loud, false-positive alerts, ensuring notifications are only sent for persistent, sustained incidents.
+
+---
+
+## Step 12: Configure Self-Healing and Auto-Scaling
+
+### Question: What are we doing in this step?
+**Answer:**
+In this step, I'm verifying the self-healing and auto-scaling capabilities of the microservice deployment in GKE to ensure operational resilience. I check that ArgoCD automatically self-heals the deployment by reverting manual changes back to the Git-defined configuration, confirm that the liveness and readiness probes restart unhealthy containers, and run a CPU load test to observe the Horizontal Pod Autoscaler (HPA) scale the replica count up dynamically from 2 to 4 in real-time as CPU utilization crosses the 80% threshold.
+
+### Question: Why does scale-down take longer than scale-up?
+**Answer:**
+Scale-down takes longer because the Horizontal Pod Autoscaler (HPA) has a default downscale stabilization window of 300 seconds (5 minutes). This stabilization window prevents "flapping," where the replica count rapidly bounces up and down during bursty or transient traffic spikes. On the other hand, the scale-up stabilization window is 0 seconds by default, allowing Kubernetes to respond immediately to load increases and prevent application performance degradation.
