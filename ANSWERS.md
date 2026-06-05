@@ -159,3 +159,18 @@ In this step, I'm verifying the self-healing and auto-scaling capabilities of th
 ### Question: Why does scale-down take longer than scale-up?
 **Answer:**
 Scale-down takes longer because the Horizontal Pod Autoscaler (HPA) has a default downscale stabilization window of 300 seconds (5 minutes). This stabilization window prevents "flapping," where the replica count rapidly bounces up and down during bursty or transient traffic spikes. On the other hand, the scale-up stabilization window is 0 seconds by default, allowing Kubernetes to respond immediately to load increases and prevent application performance degradation.
+
+---
+
+## Secret Mission: Create a Security Correlation Dashboard
+
+### Question: What are we doing in this step?
+**Answer:**
+In this secret mission, I'm creating a centralized security correlation dashboard in Grafana that displays both application performance metrics (latency, HTTP requests/errors) and runtime security alerts (Falco system events) on the same timeline. I also configure a custom templated variable selector (`$priority`) based on the `priority_raw` label, allowing security analysts to dynamically filter alerts by critical or warning severity tiers across both correlation panels.
+
+### Question: How does correlating security alerts with application metrics help in incident response, and what does the priority variable selector accomplish?
+**Answer:**
+1. **Correlating Alerts with Metrics**:
+   By displaying security alerts (like container shell spawning or unauthorized writes) alongside application performance data (like latency P95 spikes or 5xx error rates) on a unified timeline, security teams can distinguish between false positives and actual high-impact security incidents. For example, a standalone shell execution event might be a routine admin task, but when it is directly correlated with a sudden spike in application error rates and response latency, it strongly indicates a successful application compromise or active denial-of-service attack in progress. This combined visibility is crucial for Security Operations Centers (SOCs) to triage and prioritize responses.
+2. **Priority Variable Selector**:
+   The `priority` template variable selector dynamically filters the Falco security event series displayed on the dashboard by their severity level (e.g., `warning`, `critical`). This allows analysts to filter out low-priority background noise (like notices or warnings) and instantly isolate high-impact critical events during active incident analysis, improving response efficiency.

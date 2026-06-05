@@ -164,7 +164,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(falco_events_total[5m]) or rate(falcosecurity_falcosidekick_falco_events_total[5m])) by (rule, priority)",
+          "expr": "sum(rate(falco_events_total{priority_raw=~\"$priority\"}[5m]) or rate(falcosecurity_falcosidekick_falco_events_total{priority_raw=~\"$priority\"}[5m])) by (rule, priority)",
           "legendFormat": "{{priority}}: {{rule}}",
           "range": true,
           "refId": "A"
@@ -213,7 +213,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(increase(falco_events_total[5m]) or increase(falcosecurity_falcosidekick_falco_events_total[5m]))",
+          "expr": "sum(increase(falco_events_total{priority_raw=~\"$priority\"}[5m]) or increase(falcosecurity_falcosidekick_falco_events_total{priority_raw=~\"$priority\"}[5m]))",
           "legendFormat": "Falco Security Incidents",
           "range": true,
           "refId": "B"
@@ -238,6 +238,38 @@
     "falco",
     "prometheus"
   ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": [
+            "warning",
+            "critical"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(falcosecurity_falcosidekick_falco_events_total, priority_raw)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "priority",
+        "options": [],
+        "query": {
+          "query": "label_values(falcosecurity_falcosidekick_falco_events_total, priority_raw)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
   "time": {
     "from": "now-1h",
     "to": "now"
