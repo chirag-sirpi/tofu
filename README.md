@@ -4,8 +4,7 @@
 
 **Project Link:** [View Project](https://learn.nextwork.org/projects/467554e5-3aec-45c4-8b5b-8ba8e1042ae0)
 
-**Author:** Chirag S Kotian  
-**Email:** ckotian117@gmail.com
+**Author:** Chirag S Kotian
 
 ---
 
