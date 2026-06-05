@@ -7,6 +7,7 @@ metadata:
     app: devsecops-flask
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: devsecops-flask
