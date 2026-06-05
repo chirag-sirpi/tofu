@@ -4,6 +4,9 @@ metadata:
   name: default
   namespace: flask-app
 spec:
+  selector:
+    matchLabels:
+      app: devsecops-flask
   mtls:
     mode: STRICT
   portLevelMtls:
