@@ -168,9 +168,9 @@ Scale-down takes longer because the Horizontal Pod Autoscaler (HPA) has a defaul
 **Answer:**
 In this secret mission, I'm creating a centralized security correlation dashboard in Grafana that displays both application performance metrics (latency, HTTP requests/errors) and runtime security alerts (Falco system events) on the same timeline. I also configure a custom templated variable selector (`$priority`) based on the `priority_raw` label, allowing security analysts to dynamically filter alerts by critical or warning severity tiers across both correlation panels.
 
-### Question: How does correlating security alerts with application metrics help in incident response, and what does the priority variable selector accomplish?
+### Question: Describe how the combined alert rule reduces false positives compared to alerting on Falco events or error rate alone.
 **Answer:**
-1. **Correlating Alerts with Metrics**:
-   By displaying security alerts (like container shell spawning or unauthorized writes) alongside application performance data (like latency P95 spikes or 5xx error rates) on a unified timeline, security teams can distinguish between false positives and actual high-impact security incidents. For example, a standalone shell execution event might be a routine admin task, but when it is directly correlated with a sudden spike in application error rates and response latency, it strongly indicates a successful application compromise or active denial-of-service attack in progress. This combined visibility is crucial for Security Operations Centers (SOCs) to triage and prioritize responses.
-2. **Priority Variable Selector**:
-   The `priority` template variable selector dynamically filters the Falco security event series displayed on the dashboard by their severity level (e.g., `warning`, `critical`). This allows analysts to filter out low-priority background noise (like notices or warnings) and instantly isolate high-impact critical events during active incident analysis, improving response efficiency.
+A combined alert rule requires both a runtime anomaly (like a Falco shell spawn) and application-level impact (elevated 5xx error rate) to trigger simultaneously, reducing false positives:
+1. **Alerting on Falco alone** creates noise from routine, authorized tasks (e.g., developers or sysadmins running debug shells inside containers).
+2. **Alerting on error rate alone** triggers false alarms during transient network drops, external dependency downtime, or benign traffic surges.
+By correlating both signals, the combined rule ensures alerts only fire when a runtime security event directly causes application disruption, confirming a successful exploit or active compromise rather than background noise.
