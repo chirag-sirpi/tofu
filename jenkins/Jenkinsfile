@@ -65,7 +65,6 @@ spec:
         disableConcurrentBuilds()
         timeout(time: 45, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '5'))
-        timestamps()
     }
 
     triggers {
