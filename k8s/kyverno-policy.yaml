@@ -19,6 +19,9 @@ spec:
           - resources:
               kinds:
                 - Pod
+              namespaces:
+                - flask-app
+                - production
       validate:
         message: "Running as root is not allowed. Set runAsNonRoot to true."
         pattern:
