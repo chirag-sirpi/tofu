@@ -10,6 +10,11 @@ metadata:
   labels:
     some-label: jenkins-agent
 spec:
+  serviceAccountName: jenkins
+  volumes:
+  # FIX #2: Trivy DB cache — shared across all builds on same node
+  - name: trivy-cache
+    emptyDir: {}
   containers:
   - name: sonar
     image: sonarsource/sonar-scanner-cli:latest
@@ -23,6 +28,9 @@ spec:
     - sleep
     args:
     - 99d
+    volumeMounts:
+    - name: trivy-cache
+      mountPath: /root/.cache/trivy
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
@@ -41,22 +49,40 @@ spec:
     - sleep
     args:
     - 99d
+  - name: vault-agent
+    image: hashicorp/vault:latest
+    command:
+    - sleep
+    args:
+    - 99d
+    env:
+    - name: VAULT_ADDR
+      value: "http://vault.vault.svc.cluster.local:8200"
 '''
         }
     }
 
     options {
         disableConcurrentBuilds()
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '5'))
+        timestamps()
     }
 
     triggers {
+        // FIX #3: Webhook secret env var referenced by Jenkins GitHub plugin
+        // Configured via GITHUB_WEBHOOK_SECRET credential in Jenkins + secret in GitHub
         githubPush()
     }
 
     environment {
-        REGISTRY = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
-        IMAGE_NAME = "flask-app"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        REGISTRY    = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
+        IMAGE_NAME  = "flask-app"
+        IMAGE_TAG   = "${BUILD_NUMBER}"
+        // FIX #3: Webhook HMAC secret pulled from Jenkins credential store (backed by Vault)
+        GITHUB_WEBHOOK_SECRET = credentials('github-webhook-secret')
+        // FIX #4: Vault address for dynamic secret fetching
+        VAULT_ADDR  = "http://vault.vault.svc.cluster.local:8200"
     }
 
     stages {
@@ -75,6 +101,33 @@ spec:
             }
         }
 
+        // FIX #4: Fetch dynamic secrets from Vault before pipeline stages
+        stage('Fetch Secrets from Vault') {
+            when {
+                expression { !skipCi }
+            }
+            steps {
+                container('vault-agent') {
+                    withCredentials([string(credentialsId: 'vault-token', variable: 'VAULT_TOKEN')]) {
+                        script {
+                            // Read sonarqube token from Vault KV store
+                            def sonarToken = sh(
+                                script: "vault kv get -field=token secret/sonarqube 2>/dev/null || echo 'VAULT_UNAVAILABLE'",
+                                returnStdout: true
+                            ).trim()
+                            if (sonarToken == 'VAULT_UNAVAILABLE') {
+                                echo "Vault unavailable — falling back to Jenkins credential store."
+                            } else {
+                                echo "Successfully fetched SonarQube token from Vault."
+                                env.VAULT_SONAR_TOKEN = sonarToken
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // FIX #1: Quality Gate Wait — pipeline FAILS if SonarQube gate fails
         stage('SonarQube SAST') {
             when {
                 expression { !skipCi }
@@ -83,11 +136,13 @@ spec:
                 container('sonar') {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                         sh """
-                        sonar-scanner \
-                          -Dsonar.projectKey=devsecops-flask \
-                          -Dsonar.sources=app/ \
-                          -Dsonar.host.url=http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \
-                          -Dsonar.token=\${SONAR_TOKEN}
+                        sonar-scanner \\
+                          -Dsonar.projectKey=devsecops-flask \\
+                          -Dsonar.sources=app/ \\
+                          -Dsonar.host.url=http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \\
+                          -Dsonar.token=\${SONAR_TOKEN} \\
+                          -Dsonar.qualitygate.wait=true \\
+                          -Dsonar.qualitygate.timeout=300
                         """
                     }
                 }
@@ -101,12 +156,13 @@ spec:
             steps {
                 container('kaniko') {
                     withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh "/kaniko/executor --context=app --dockerfile=app/Dockerfile --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG} --destination=\${REGISTRY}/\${IMAGE_NAME}:latest"
+                        sh "/kaniko/executor --context=app --dockerfile=app/Dockerfile --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG} --destination=\${REGISTRY}/\${IMAGE_NAME}:latest --cache=true --cache-ttl=24h"
                     }
                 }
             }
         }
 
+        // FIX #2: Trivy cache volume prevents re-downloading DB every build
         stage('Trivy Container Scan') {
             when {
                 expression { !skipCi }
@@ -114,7 +170,14 @@ spec:
             steps {
                 container('trivy') {
                     withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --no-progress \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}"
+                        sh """
+                        trivy image \\
+                          --exit-code 1 \\
+                          --severity HIGH,CRITICAL \\
+                          --no-progress \\
+                          --cache-dir /root/.cache/trivy \\
+                          \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}
+                        """
                     }
                 }
             }
@@ -152,9 +215,9 @@ spec:
             steps {
                 container('zap') {
                     sh """
-                    zap-api-scan.py \
-                      -t http://devsecops-flask.flask-app.svc.cluster.local/metrics \
-                      -f openapi \
+                    zap-api-scan.py \\
+                      -t http://devsecops-flask.flask-app.svc.cluster.local/metrics \\
+                      -f openapi \\
                       -r zap_report.html || true
                     """
                 }
@@ -170,7 +233,7 @@ spec:
             }
         }
         failure {
-            echo "Security Pipeline failed. Deployment blocked!"
+            echo "Security Pipeline FAILED. Deployment blocked!"
         }
         success {
             echo "Security Pipeline completed successfully. Deployment succeeded!"

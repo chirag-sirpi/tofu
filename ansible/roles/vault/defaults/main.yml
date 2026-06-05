@@ -1,0 +1,5 @@
+---
+vault_namespace: vault
+vault_chart_version: "0.29.1"
+vault_release_name: vault
+vault_replicas: 1

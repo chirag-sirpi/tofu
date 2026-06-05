@@ -26,3 +26,7 @@
     - name: Run Monitoring installation
       ansible.builtin.include_role:
         name: monitoring
+
+    - name: Run HashiCorp Vault installation
+      ansible.builtin.include_role:
+        name: vault
