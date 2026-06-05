@@ -101,10 +101,14 @@ spec:
                         git config --global --add safe.directory '*'
                         git config user.name 'Jenkins CI'
                         git config user.email 'jenkins@jenkins.local'
-                        sed -i 's|image: \${REGISTRY}/\${IMAGE_NAME}:.*|image: \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}|g' k8s/deployment.yaml
+                        sed -i "s|image: ${env.REGISTRY}/${env.IMAGE_NAME}:.*|image: ${env.REGISTRY}/${env.IMAGE_NAME}:${env.IMAGE_TAG}|g" k8s/deployment.yaml
                         git add k8s/deployment.yaml
-                        git commit -m "chore: bump image tag to \${IMAGE_TAG} [skip ci]"
-                        git push https://\${GH_TOKEN}@github.com/chirag-sirpi/tofu.git main
+                        if ! git diff --quiet HEAD; then
+                            git commit -m "chore: bump image tag to ${env.IMAGE_TAG} [skip ci]"
+                            git push https://${env.GH_TOKEN}@github.com/chirag-sirpi/tofu.git main
+                        else
+                            echo "No changes to deployment manifest."
+                        fi
                         """
                     }
                 }
