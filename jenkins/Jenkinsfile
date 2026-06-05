@@ -1,3 +1,5 @@
+def skipCi = false
+
 pipeline {
     agent {
         kubernetes {
@@ -51,7 +53,6 @@ spec:
         REGISTRY = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
         IMAGE_NAME = "flask-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
-        SKIP_CI = "false"
     }
 
     stages {
@@ -64,7 +65,7 @@ spec:
                     echo "Latest commit: ${commitMsg}"
                     if (commitMsg.contains('[skip ci]')) {
                         echo "Detected [skip ci] in commit message. Skipping subsequent stages."
-                        env.SKIP_CI = "true"
+                        skipCi = true
                     }
                 }
             }
@@ -72,7 +73,7 @@ spec:
 
         stage('SonarQube SAST') {
             when {
-                expression { env.SKIP_CI == 'false' }
+                expression { !skipCi }
             }
             steps {
                 container('sonar') {
@@ -91,7 +92,7 @@ spec:
 
         stage('Build & Push Image') {
             when {
-                expression { env.SKIP_CI == 'false' }
+                expression { !skipCi }
             }
             steps {
                 container('kaniko') {
@@ -104,7 +105,7 @@ spec:
 
         stage('Trivy Container Scan') {
             when {
-                expression { env.SKIP_CI == 'false' }
+                expression { !skipCi }
             }
             steps {
                 container('trivy') {
@@ -117,7 +118,7 @@ spec:
 
         stage('ArgoCD GitOps Trigger') {
             when {
-                expression { env.SKIP_CI == 'false' }
+                expression { !skipCi }
             }
             steps {
                 container('git-tools') {
@@ -142,7 +143,7 @@ spec:
 
         stage('OWASP ZAP DAST') {
             when {
-                expression { env.SKIP_CI == 'false' }
+                expression { !skipCi }
             }
             steps {
                 container('zap') {
