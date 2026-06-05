@@ -98,6 +98,7 @@ spec:
                 container('git-tools') {
                     withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
                         sh """
+                        git config --global --add safe.directory '*'
                         git config user.name 'Jenkins CI'
                         git config user.email 'jenkins@jenkins.local'
                         sed -i 's|image: \${REGISTRY}/\${IMAGE_NAME}:.*|image: \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}|g' k8s/deployment.yaml
