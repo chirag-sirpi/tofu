@@ -45,6 +45,10 @@ spec:
         }
     }
 
+    options {
+        disableConcurrentBuilds()
+    }
+
     triggers {
         githubPush()
     }
