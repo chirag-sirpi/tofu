@@ -105,7 +105,7 @@ spec:
                         git add k8s/deployment.yaml
                         if ! git diff --quiet HEAD; then
                             git commit -m "chore: bump image tag to ${env.IMAGE_TAG} [skip ci]"
-                            git push https://${env.GH_TOKEN}@github.com/chirag-sirpi/tofu.git main
+                            git push https://${env.GH_TOKEN}@github.com/chirag-sirpi/tofu.git HEAD:main
                         else
                             echo "No changes to deployment manifest."
                         fi
@@ -132,7 +132,9 @@ spec:
 
     post {
         always {
-            deleteDir()
+            container('git-tools') {
+                sh 'rm -rf * .[^.]* || true'
+            }
         }
         failure {
             echo "Security Pipeline failed. Deployment blocked!"
