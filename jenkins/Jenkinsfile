@@ -43,10 +43,15 @@ spec:
         }
     }
 
+    triggers {
+        pollSCM('*/2 * * * *')
+    }
+
     environment {
         REGISTRY = "us-central1-docker.pkg.dev/terraform-460705/devsecops-repo"
         IMAGE_NAME = "flask-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
+        SKIP_CI = "false"
     }
 
     stages {
@@ -54,10 +59,21 @@ spec:
             steps {
                 echo "Cloning repository..."
                 checkout scm
+                script {
+                    def commitMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    echo "Latest commit: ${commitMsg}"
+                    if (commitMsg.contains('[skip ci]')) {
+                        echo "Detected [skip ci] in commit message. Skipping subsequent stages."
+                        env.SKIP_CI = "true"
+                    }
+                }
             }
         }
 
         stage('SonarQube SAST') {
+            when {
+                environment name: 'SKIP_CI', value: 'false'
+            }
             steps {
                 container('sonar') {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
@@ -74,6 +90,9 @@ spec:
         }
 
         stage('Build & Push Image') {
+            when {
+                environment name: 'SKIP_CI', value: 'false'
+            }
             steps {
                 container('kaniko') {
                     withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
@@ -84,6 +103,9 @@ spec:
         }
 
         stage('Trivy Container Scan') {
+            when {
+                environment name: 'SKIP_CI', value: 'false'
+            }
             steps {
                 container('trivy') {
                     withCredentials([file(credentialsId: 'artifact-registry-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
@@ -94,6 +116,9 @@ spec:
         }
 
         stage('ArgoCD GitOps Trigger') {
+            when {
+                environment name: 'SKIP_CI', value: 'false'
+            }
             steps {
                 container('git-tools') {
                     withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
@@ -116,6 +141,9 @@ spec:
         }
 
         stage('OWASP ZAP DAST') {
+            when {
+                environment name: 'SKIP_CI', value: 'false'
+            }
             steps {
                 container('zap') {
                     sh """
