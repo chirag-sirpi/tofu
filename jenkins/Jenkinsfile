@@ -72,7 +72,7 @@ spec:
 
         stage('SonarQube SAST') {
             when {
-                environment name: 'SKIP_CI', value: 'false'
+                expression { env.SKIP_CI == 'false' }
             }
             steps {
                 container('sonar') {
@@ -91,7 +91,7 @@ spec:
 
         stage('Build & Push Image') {
             when {
-                environment name: 'SKIP_CI', value: 'false'
+                expression { env.SKIP_CI == 'false' }
             }
             steps {
                 container('kaniko') {
@@ -104,7 +104,7 @@ spec:
 
         stage('Trivy Container Scan') {
             when {
-                environment name: 'SKIP_CI', value: 'false'
+                expression { env.SKIP_CI == 'false' }
             }
             steps {
                 container('trivy') {
@@ -117,7 +117,7 @@ spec:
 
         stage('ArgoCD GitOps Trigger') {
             when {
-                environment name: 'SKIP_CI', value: 'false'
+                expression { env.SKIP_CI == 'false' }
             }
             steps {
                 container('git-tools') {
@@ -142,7 +142,7 @@ spec:
 
         stage('OWASP ZAP DAST') {
             when {
-                environment name: 'SKIP_CI', value: 'false'
+                expression { env.SKIP_CI == 'false' }
             }
             steps {
                 container('zap') {
