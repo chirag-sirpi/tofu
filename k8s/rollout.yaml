@@ -1,0 +1,79 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: devsecops-flask
+  namespace: flask-app
+  labels:
+    app: devsecops-flask
+spec:
+  replicas: 5
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: devsecops-flask
+  template:
+    metadata:
+      labels:
+        app: devsecops-flask
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: flask-app
+          image: us-central1-docker.pkg.dev/terraform-460705/devsecops-repo/flask-app:30
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: HOME
+              value: /home/appuser
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+  strategy:
+    blueGreen:
+      # Active service receives 100% of production traffic (blue)
+      activeService: devsecops-flask
+      # Preview service exposes the new version (green) for testing before promotion
+      previewService: devsecops-flask-preview
+      # Auto-promote after readiness checks pass (set false for manual approval gate)
+      autoPromotionEnabled: true
+      # Wait 30s after all pods Ready before promoting to active
+      autoPromotionSeconds: 30
+      # Keep old (blue) ReplicaSet running for 120s after promotion — instant rollback window
+      scaleDownDelaySeconds: 120
+      # Max pods allowed during blue-green switch (both colors alive simultaneously)
+      previewReplicaCount: 5
+      # Anti-affinity for preview pods — spread across different nodes than active
+      antiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: {}
+        preferredDuringSchedulingIgnoredDuringExecution:
+          weight: 1

@@ -1,0 +1,51 @@
+---
+- name: Add Argo Helm repo
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: https://argoproj.github.io/argo-helm
+    state: present
+
+- name: Create argo-rollouts namespace
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ argo_rollouts_namespace }}"
+    state: present
+
+- name: Install Argo Rollouts via Helm
+  kubernetes.core.helm:
+    name: argo-rollouts
+    chart_ref: argo/argo-rollouts
+    chart_version: "{{ argo_rollouts_chart_version }}"
+    release_namespace: "{{ argo_rollouts_namespace }}"
+    create_namespace: true
+    wait: true
+    values:
+      # Enable dashboard for visualizing blue-green rollout progress
+      dashboard:
+        enabled: true
+        service:
+          type: ClusterIP
+      # Metrics for Prometheus scraping
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+          additionalLabels:
+            release: kube-prometheus-stack
+      controller:
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+
+- name: Print Argo Rollouts install complete
+  ansible.builtin.debug:
+    msg: >
+      Argo Rollouts installed in namespace '{{ argo_rollouts_namespace }}'.
+      Access dashboard: kubectl port-forward svc/argo-rollouts-dashboard -n argo-rollouts 3100:3100
+      Watch rollout: kubectl argo rollouts get rollout devsecops-flask -n flask-app --watch
+      Promote manually: kubectl argo rollouts promote devsecops-flask -n flask-app

@@ -11,6 +11,10 @@
       ansible.builtin.include_role:
         name: argocd
 
+    - name: Run Argo Rollouts installation (Blue-Green deployments)
+      ansible.builtin.include_role:
+        name: argo-rollouts
+
     - name: Run Istio installation
       ansible.builtin.include_role:
         name: istio

@@ -30,4 +30,12 @@
           - blueocean:latest
           - kubernetes:latest
           - kubernetes-credentials-provider:latest
+          # Jenkins build metrics exposed at /prometheus — scraped by Prometheus
+          - prometheus:latest
+          # GitHub webhook HMAC validation support
+          - github:latest
+          # Pipeline stage view for Blue-Green status visibility
+          - pipeline-stage-view:latest
+          # HTML publisher for ZAP DAST reports
+          - htmlpublisher:latest
     state: present

@@ -133,9 +133,57 @@
         policies=jenkins-policy
         ttl=1h"
 
+- name: Enable Vault file audit device (all secret access logged)
+  kubernetes.core.k8s_exec:
+    namespace: "{{ vault_namespace }}"
+    pod: vault-0
+    container: vault
+    command: >
+      sh -c "VAULT_TOKEN=root VAULT_ADDR=http://127.0.0.1:8200
+      vault audit enable file file_path=/vault/logs/audit.log 2>/dev/null || true"
+
+# ── Fluentbit ConfigMap — tail Vault audit log and forward to Loki ─────────────
+- name: Create Fluentbit ConfigMap for Vault audit → Loki pipeline
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: fluentbit-vault-audit
+        namespace: "{{ vault_namespace }}"
+      data:
+        vault-audit.conf: |
+          [INPUT]
+              Name              tail
+              Path              /vault/logs/audit.log
+              Tag               vault.audit
+              Parser            json
+              Refresh_Interval  5
+              Mem_Buf_Limit     5MB
+              Skip_Long_Lines   On
+
+          [FILTER]
+              Name    record_modifier
+              Match   vault.audit
+              Record  cluster devsecops-gke
+              Record  source vault-audit
+
+          [OUTPUT]
+              Name            loki
+              Match           vault.audit
+              Host            loki.monitoring.svc.cluster.local
+              Port            3100
+              Labels          job=vault-audit,namespace={{ vault_namespace }}
+              Label_Keys      $request.operation,$request.path,$auth.display_name
+              Line_Format     json
+              Auto_Kubernetes_Labels  On
+
 - name: Print Vault setup complete
   ansible.builtin.debug:
     msg: >
-      Vault deployed at http://vault.vault.svc.cluster.local:8200
-      Dev root token: root
+      Vault deployed at http://vault.vault.svc.cluster.local:8200.
+      Dev root token: root.
+      Audit log: vault-0:/vault/logs/audit.log → forwarded to Loki via Fluentbit.
       IMPORTANT: Replace dev mode with HA + GCP KMS auto-unseal before production!
+

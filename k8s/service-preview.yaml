@@ -1,0 +1,21 @@
+---
+# Preview service: exposes the GREEN (new) version before promotion
+# ArgoCD + Argo Rollouts automatically switches the selector on each rollout
+apiVersion: v1
+kind: Service
+metadata:
+  name: devsecops-flask-preview
+  namespace: flask-app
+  labels:
+    app: devsecops-flask
+    role: preview
+  annotations:
+    # Tell ArgoCD not to manage the selector (Rollout controller owns it)
+    argocd.argoproj.io/managed-by: argo-rollouts
+spec:
+  ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+  selector:
+    app: devsecops-flask  # Rollout controller will update this selector dynamically
