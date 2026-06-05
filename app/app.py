@@ -44,7 +44,7 @@ def log_request(response):
 def index():
     return jsonify({
         "status": "healthy",
-        "message": "Welcome to Chirag GKE DevSecOps microservice! and welcome to Feel it",
+        "message": "Welcome to Chirag GKE DevSecOps microservice!",
         "time": time.time()
     })
 
