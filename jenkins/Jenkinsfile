@@ -44,7 +44,7 @@ spec:
     }
 
     triggers {
-        pollSCM('*/2 * * * *')
+        githubPush()
     }
 
     environment {
